@@ -1,27 +1,25 @@
-<!DOCTYPE html>
-<html lang="ar">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>النجاة والانتقام — Prototype</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لعبة أنمي – الشرير على الحافة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="ui">
-    <div id="topbar">
-      <div id="timer">00:00</div>
-      <div id="hearts"></div>
-    </div>
-    <div id="overlay" class="hidden">
-      <div id="box">
-        <h1 id="boxTitle">عنوان</h1>
-        <p id="boxMsg"></p>
-        <div id="boxBtns"></div>
-      </div>
-    </div>
+    <div id="title">أنمي: الحافة القاتلة</div>
+    <div id="hearts"></div>
+    <div id="timer"></div>
+    <div id="hint">التحكم: A/D أو ←/→ – قفز: W/↑ أو المسافة – اندفاع: Shift</div>
   </div>
 
-  <canvas id="gameCanvas" width="960" height="640"></canvas>
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <div id="banner" class="hidden"></div>
 
   <script src="game.js"></script>
 </body>
