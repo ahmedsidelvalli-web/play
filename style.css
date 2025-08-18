@@ -1,29 +1,226 @@
-/* style.css - مظهر مظلم واحترافي */
 :root{
-  --bg:#0b0b0c;
-  --panel:#121214;
-  --accent:#d65a31;
-  --muted:#9aa0a6;
-  --health:#e74c3c;
+  --bg1:#0a0a12; --bg2:#121227; --ink:#e4e7ff; --accent:#ff00aa; --accent2:#6cc9ff;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#eee}
-#gameCanvas{display:block;margin:18px auto;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.7);background:
-  radial-gradient(ellipse at center, #1a1a1a 0%, #0c0c0c 60%);}
-#ui{position:fixed;left:0;right:0;top:0;pointer-events:none}
-#topbar{width:960px;margin:8px auto;display:flex;justify-content:space-between;align-items:center;pointer-events:auto}
-#timer{background:linear-gradient(180deg,#1b1b1b,#151515);padding:8px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);font-weight:700}
-#hearts{display:flex;gap:8px;align-items:center}
-.heart{width:22px;height:18px;border-radius:4px;background:rgba(255,255,255,0.06);display:inline-block;border:1px solid rgba(255,255,255,0.03)}
-.heart.full{background:linear-gradient(180deg,var(--health),#a02a2a);box-shadow:0 2px 8px rgba(231,76,60,0.25) inset}
-#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto}
-#overlay.hidden{display:none}
-#box{width:560px;background:linear-gradient(180deg,var(--panel),#0f0f10);padding:26px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 10px 40px rgba(0,0,0,0.6)}
-#box h1{margin:0 0 8px 0;font-size:28px}
-#box p{color:var(--muted);margin:0 0 18px}
-.btn{display:inline-block;padding:10px 14px;border-radius:8px;margin-right:8px;background:var(--accent);color:#111;font-weight:700;cursor:pointer}
-.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
-#boxBtns{display:flex;justify-content:flex-end}
-@media (max-width:1000px){
-  #gameCanvas,#topbar{width:90%;max-width:960px}
+html,body{height:100%;margin:0}
+body{
+  font-family:'Cairo',system-ui,Segoe UI,Arial; color:var(--ink); background: radial-gradient(1200px 800px at 50% 20%, #1a1a33 0%, #0b0b16 60%, #07070e 100%) fixed;
+  overflow:hidden;
 }
+#game{display:block; width:100vw; height:100vh; image-rendering:pixelated;}
+
+/* واجهة أنمي لامعة */
+#ui{position:fixed; inset:16px auto auto 16px; z-index:5; user-select:none}
+#title{font-weight:900; letter-spacing:1px; font-size:28px; text-shadow:0 0 10px rgba(255,0,170,.45)}
+#hearts{margin-top:8px; filter:drop-shadow(0 0 6px rgba(255,0,170,.35))}
+#timer{position:fixed; top:16px; right:16px; font-weight:700; background:linear-gradient(90deg, rgba(255,0,170,.15), rgba(108,201,255,.15));
+  padding:6px 12px; border:1px solid rgba(255,255,255,.08); border-radius:12px; text-shadow:0 0 8px rgba(108,201,255,.35)}
+#hint{margin-top:6px; font-size:12px; opacity:.75}
+
+/* بانر فوز/خسارة */
+#banner{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:radial-gradient(60% 60% at 50% 40%, rgba(10,10,22,.65), rgba(7,7,14,.9)); z-index:10}
+#banner.hidden{display:none}
+#banner .card{padding:24px 28px; border-radius:16px; border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg, rgba(255,0,170,.08), rgba(108,201,255,.08));
+  box-shadow:0 20px 60px rgba(0,0,0,.5), inset 0 0 40px rgba(255,0,170,.12);
+  text-align:center; max-width:520px}
+#banner h1{margin:0 0 10px; font-size:28px; text-shadow:0 0 10px rgba(255,0,170,.6)}
+#banner p{margin:0 0 14px; opacity:.9}
+#banner button{cursor:pointer; padding:10px 16px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(90deg, rgba(255,0,170,.35), rgba(108,201,255,.35)); color:white; font-weight:800}
+#banner button:hover{filter:brightness(1.1)}
+
+/* تأثير مسح-خطوط أنمي خفيف */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; background:repeating-linear-gradient(180deg,rgba(255,255,255,.03) 0 2px, transparent 2px 4px);
+  mix-blend-mode:soft-light; opacity:.05; z-index:2
+}
+---
+
+## 🧠 3) `game.js`
+```javascript
+// ===== لعبة أنمي: الشرير على الحافة =====
+// تعمل مباشرة على Canvas بدون صور. اختياريًا يمكنك إضافة صور داخل مجلد sprites/ بالأسماء المذكورة أدناه.
+
+//--------------------------------------
+// الإعداد الأساسي للكانفاس + دقة الشاشات العالية
+//--------------------------------------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+function resize(){
+  const w = Math.floor(window.innerWidth), h = Math.floor(window.innerHeight);
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  canvas.width = Math.floor(w*DPR); canvas.height = Math.floor(h*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize); resize();
+
+//--------------------------------------
+// أدوات مساعدة
+//--------------------------------------
+function clamp(v,a,b){return Math.max(a, Math.min(b,v))}
+function aabb(x1,y1,w1,h1,x2,y2,w2,h2){return !(x2>x1+w1||x2+w2<x1||y2>y1+h1||y2+h2<y1)}
+function roundRect(c,x,y,w,h,r,fill,stroke){
+  r=Math.min(r, w/2, h/2); c.beginPath(); c.moveTo(x+r,y);
+  c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r);
+  if(fill) c.fill(); if(stroke) c.stroke();
+}
+
+//--------------------------------------
+// مدخلات التحكم
+//--------------------------------------
+const keys = {}; window.addEventListener('keydown',e=>{keys[e.key]=true}); window.addEventListener('keyup',e=>{keys[e.key]=false});
+
+//--------------------------------------
+// تحميل صور اختيارية (اللاعب/الحجر/السلاح/الثقيل/شرير)
+//--------------------------------------
+const IMAGES = {}; const imageFiles = {
+  player: 'sprites/player.png',
+  stone:  'sprites/stone.png',
+  weapon: 'sprites/weapon.png',
+  heavy:  'sprites/heavy.png',
+  villain:'sprites/villain1.png'
+};
+let imagesToLoad = Object.keys(imageFiles).length, imagesLoaded=0, assetsReady=false;
+function loadImages(cb){
+  Object.entries(imageFiles).forEach(([k,src])=>{
+    const img = new Image(); img.src = src;
+    img.onload = ()=>{IMAGES[k]=img; done()}; img.onerror=()=>done();
+  });
+  function done(){ imagesLoaded++; if(imagesLoaded>=imagesToLoad){ assetsReady=true; cb&&cb(); } }
+}
+
+//--------------------------------------
+// عالم اللعبة
+//--------------------------------------
+const world = { gravity: 1400, floorH: 80 };
+const uiHearts = document.getElementById('hearts');
+const uiTimer  = document.getElementById('timer');
+const banner   = document.getElementById('banner');
+
+const player = { x:140, y:0, w:68, h:110, vx:0, vy:0, speed:380, jump:640, onGround:false, face:1, dashCD:0, hp:5, hpMax:5 };
+const falling=[]; // الحجارة/الأشياء
+
+// أنيميشن مبسّط للّاعب (بدون شيت – يهتز/يميل بشكل أنمي)
+const anim = { t:0 };
+
+// الشرير والمرحلة
+let boss=null, beams=[], timeAlive=0, levelIndex=0;
+const LEVELS=[{ surviveSeconds: 45, moveSpeed: 120, rockCooldown: 1.6, powerUnlockAt: 18, powerCooldown: 6, powerChargeTime: 1.0, beamDuration: .85 }];
+
+//--------------------------------------
+// بدء اللعبة
+//--------------------------------------
+function restart(){
+  player.x=140; player.y=120; player.vx=0; player.vy=0; player.hp=player.hpMax; falling.length=0; beams.length=0; timeAlive=0;
+  initBoss();
+}
+
+function initBoss(){
+  const cfg = LEVELS[levelIndex];
+  boss = { x: canvas.width/DPR*0.5-60, y: 20, w: 120, h: 110, dir:1, cfg, timers:{rock:0,power:0,charge:0}, phase:'rocks' };
+}
+
+//--------------------------------------
+// واجهة القلوب والمؤقّت
+//--------------------------------------
+function renderHearts(){
+  let html='';
+  for(let i=0;i<player.hpMax;i++){
+    const full = i < player.hp;
+    html += `<span style="display:inline-block;width:22px;height:22px;margin-inline-end:4px;border-radius:6px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg, ${full?'rgba(255,0,170,.75)':'rgba(108,201,255,.25)'} , rgba(0,0,0,.25)); box-shadow:0 0 8px ${full?'rgba(255,0,170,.5)':'transparent'}"></span>`;
+  }
+  uiHearts.innerHTML=html;
+}
+
+//--------------------------------------
+// منطق التحديث
+//--------------------------------------
+function update(dt){
+  anim.t += dt;
+
+  // حركة اللاعب
+  const left = keys['ArrowLeft']||keys['a']||keys['A'];
+  const right= keys['ArrowRight']||keys['d']||keys['D'];
+  const up   = keys['ArrowUp']||keys['w']||keys['W']||keys[' '];
+  const dash = keys['Shift'];
+
+  const ax = (right?1:0) - (left?1:0);
+  player.vx = ax * player.speed;
+  if(up && player.onGround){ player.vy = -player.jump; player.onGround=false; }
+  if(dash && player.dashCD<=0){ player.vx *= 1.8; player.dashCD=0.8; }
+  player.dashCD = Math.max(0, player.dashCD-dt);
+
+  // جاذبية وأرض
+  player.vy += world.gravity*dt;
+  player.x += player.vx*dt; player.y += player.vy*dt;
+  const floorY = canvas.height/DPR - world.floorH - player.h;
+  if(player.y >= floorY){ player.y=floorY; player.vy=0; player.onGround=true; }
+  player.x = clamp(player.x, 16, canvas.width/DPR - player.w - 16);
+  player.face = (player.vx>=0)?1:-1;
+
+  // تحديث الأحجار
+  for(let i=falling.length-1;i>=0;i--){
+    const o=falling[i];
+    o.vy += world.gravity*dt * 0.8; // أبطأ قليلاً من اللاعب
+    o.x += o.vx*dt; o.y += o.vy*dt; o.rot += o.vr*dt;
+    if(o.y>canvas.height/DPR+200) falling.splice(i,1);
+    // اصطدام بسيط مع اللاعب
+    if(aabb(player.x,player.y,player.w,player.h, o.x,o.y,o.w,o.h)){
+      hitPlayer(1); falling.splice(i,1);
+    }
+  }
+
+  // الشرير + الأشعة
+  updateBoss(dt); updateBeams(dt);
+
+  // فوز المرحلة
+  uiTimer.textContent = `النجاة: ${Math.max(0, (LEVELS[levelIndex].surviveSeconds-timeAlive)).toFixed(0)}s`;
+}
+
+function hitPlayer(dmg){
+  if(player.hp<=0) return; player.hp = Math.max(0, player.hp-dmg); renderHearts();
+  // ردة فعل
+  player.vy = -220; player.x += (Math.random()<.5?-1:1)*24;
+  if(player.hp<=0){ showBanner('خسرت!','أعد المحاولة', ()=>{ restart(); hideBanner(); }); }
+}
+
+//--------------------------------------
+// ذكاء الشرير وقوته
+//--------------------------------------
+function updateBoss(dt){
+  const cfg=boss.cfg; timeAlive += dt;
+
+  // حركة يمين/يسار أعلى الشاشة
+  boss.x += boss.dir*cfg.moveSpeed*dt;
+  const L=20, R=(canvas.width/DPR - boss.w - 20);
+  if(boss.x<=L){boss.x=L; boss.dir=1} if(boss.x>=R){boss.x=R; boss.dir=-1}
+
+  // رمي الحجارة
+  boss.timers.rock -= dt;
+  if(boss.timers.rock<=0){ throwRockAtPlayer(); boss.timers.rock = cfg.rockCooldown; }
+
+  // فتح القوة
+  if(timeAlive>=cfg.powerUnlockAt){
+    boss.timers.power -= dt;
+    if(boss.phase==='rocks' && boss.timers.power<=0){ boss.phase='charging'; boss.timers.charge = cfg.powerChargeTime; }
+    if(boss.phase==='charging'){
+      boss.timers.charge -= dt;
+      if(boss.timers.charge<=0){
+        const px = player.x + player.w/2; spawnBeam(px, cfg.beamDuration); boss.phase='beam';
+      }
+    } else if(boss.phase==='beam'){
+      if(beams.length===0){ boss.phase='rocks'; boss.timers.power = cfg.powerCooldown; }
+    }
+  }
+
+  if(timeAlive>=cfg.surviveSeconds){
+    showBanner('نجوت!','مرحلة جديدة',()=>{ timeAlive=0; LEVELS[0].rockCooldown=Math.max(.9, LEVELS[0].rockCooldown*.9); restart(); hideBanner(); });
+  }
+}
+
+function throwRockAtPlayer(){
+  const px = player.x+player.w/2, bx=boss.x+boss.w/2;
+  const toward = Math.sign(px-bx) || (Math.random()<.5?-1:1);
+  const speedX = 120 * toward, speedY = 180 + Math.rand
